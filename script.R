@@ -4,7 +4,7 @@ library(dplyr)
 library(ggplot2)
 
 # We make a copy of the data set
-copyAccidents <- accidents
+copyAccidents <- nassCDS
 
 #-------------------- Number of registered accidents regarding the age of drivers
 # We group our dataset by the age of each people involved in an accident
@@ -100,3 +100,11 @@ speedPlot <- ggplot(data = speedGroup, aes(x = dvcat, y = count, fill = dead)) +
 
 print(speedPlot)
 #--------------------
+
+beltdeadGroup$density = beltdeadGroup$count/sum(beltdeadGroup$count)*100
+
+beltdeadPlot2 <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
+  geom_bar(stat='identity')
+
+print(beltdeadPlot2)
+
