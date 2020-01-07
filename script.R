@@ -83,7 +83,7 @@ beltdeadGroup <- copyAccidents %>%
   summarise(count = n())
 beltdeadGroup
 
-beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = count, fill = seatbelt)) + 
+beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = normalize(count, method = "standardize", range = c(0, 1), margin = 1L, on.constant = "quiet"), fill = seatbelt)) + 
   geom_bar(stat='identity')
 
 print(beltdeadPlot)
