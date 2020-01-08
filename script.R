@@ -68,9 +68,10 @@ print(carAgePlot)
 beltGroup <- copyAccidents %>%
   group_by(injSeverity, seatbelt) %>%
   summarise(count = n())
+beltGroup$density = beltGroup$count/sum(beltGroup$count)*100
 beltGroup
 
-beltPlot <- ggplot(data = beltGroup, aes(x = injSeverity, y = count, fill = seatbelt)) + 
+beltPlot <- ggplot(data = beltGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
   geom_bar(stat='identity')
 
 print(beltPlot)
@@ -81,9 +82,10 @@ beltdeadGroup <- copyAccidents %>%
   group_by(injSeverity, seatbelt) %>%
   filter(dead == "dead") %>%
   summarise(count = n())
+beltdeadGroup$density = beltdeadGroup$count/sum(beltdeadGroup$count)*100
 beltdeadGroup
 
-beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = normalize(count, method = "standardize", range = c(0, 1), margin = 1L, on.constant = "quiet"), fill = seatbelt)) + 
+beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
   geom_bar(stat='identity')
 
 print(beltdeadPlot)
@@ -93,18 +95,42 @@ print(beltdeadPlot)
 speedGroup <- copyAccidents %>%
   group_by(dvcat, dead) %>%
   summarise(count = n())
+speedGroup$density = speedGroup$count/sum(speedGroup$count)*100
 speedGroup
 
-speedPlot <- ggplot(data = speedGroup, aes(x = dvcat, y = count, fill = dead)) + 
+speedPlot <- ggplot(data = speedGroup, aes(x = dvcat, y = density, fill = dead)) + 
   geom_bar(stat='identity')
 
 print(speedPlot)
 #--------------------
 
-beltdeadGroup$density = beltdeadGroup$count/sum(beltdeadGroup$count)*100
+#-------------------- Relation between airbag deployment and injuries level
+airbagGroup <- copyAccidents %>%
+  group_by(abcat, injSeverity) %>%
+  summarise(count = n())
+airbagGroup$density = airbagGroup$count/sum(airbagGroup$count)*100
+airbagGroup
 
-beltdeadPlot2 <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
+airbagPlot <- ggplot(data = airbagGroup, aes(x = injSeverity, y = count, fill = abcat)) + 
   geom_bar(stat='identity')
 
-print(beltdeadPlot2)
+print(airbagPlot)
+#--------------------
+
+#-------------------- Relation between frontal chocs and injury levels
+frontalGroup <- copyAccidents %>%
+  group_by(injSeverity, frontal) %>%
+  filter(dead == "dead") %>%
+  mutate(frontalGroup = replace(frontal, frontal==0, "non-frontal")) %>%
+  mutate(frontalGroup = replace(frontal, frontal==0, "frontal")) %>%
+  summarise(count = n())
+frontalGroup$density = frontalGroup$count/sum(frontalGroup$count)*100
+frontalGroup
+
+frontalPlot <- ggplot(data = frontalGroup, aes(x = injSeverity, y = density, fill = frontal)) + 
+  geom_bar(stat='identity')
+
+print(frontalPlot)
+#--------------------
+
 
