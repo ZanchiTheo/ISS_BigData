@@ -1,0 +1,259 @@
+```{r}
+# We use dplyr library, which help manipulate data
+library(dplyr)
+#library(tidyverse)
+# We use ggplot2 to make plots
+library(ggplot2)
+# Library used to put several plot in a grid
+library(gridExtra)
+
+library(hrbrthemes)
+library(viridis)
+
+library(hexbin)
+library(RColorBrewer)
+
+library(fmsb)
+
+# We make a copy of the data set
+copyAccidents <- nassCDS
+```
+
+```{r}
+#-------------------- Number of registered accidents regarding the age of drivers
+# We group our dataset by the age of each people involved in an accident
+# We keep only the drivers
+# We summarize with a column counting each people involved in an accident depending his age
+ageGroup <- copyAccidents %>%
+  group_by(ageOFocc, sex) %>%
+  filter(occRole == "driver") %>%
+  summarise(count = n())
+ageGroup
+
+# We define and print a plot correponding to the above variable
+agePlot <- ggplot(data = ageGroup, aes(x = ageOFocc, y = count, group = 1, colour = sex)) +
+  geom_point(size=2) +
+  geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95) +
+  xlab("Age of the driver") +
+  ylab("Number of accidents") +
+  theme(plot.title = element_text(size=22))
+print(agePlot)
+#--------------------
+```
+
+```{r}
+#-------------------- Number of accident per year
+accGroup <- copyAccidents %>%
+  group_by(yearacc, occRole) %>%
+  summarise(count = n())
+accGroup
+
+# We define and print a plot correponding to the above variable
+accPlot <- ggplot(data = accGroup, aes(x = yearacc, y = count, colour = occRole, shape = occRole)) %>% 
+  + geom_point(size = 4) %>%
+  + geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95)
+print(accPlot)
+#-------------------- 
+```
+
+```{r}
+#-------------------- Relation between speed and number of accident
+speedGroup <- copyAccidents %>%
+  # We group by speed and death
+  group_by(dvcat, dead) %>%
+  # We keep only the deadly accidents
+  filter(dead == "dead") %>%
+  # We count the number of every group made by group_by
+  summarise(count = n())
+# We tranform the counting made into percentages. So to every speed will be associated the percentage of deadly accidents
+speedGroup$density = speedGroup$count/sum(speedGroup$count)*100
+# We create a new column with rounded densities
+speedGroup$densityRounded = signif(speedGroup$density, digits = 2)
+# We use the previously defined rounded density to create a label for every part of the plot and adding "%" to them
+speedGroup$densityString <- paste(speedGroup$densityRounded, "%")
+speedGroup
+
+# We create the plot
+speedPlot <- ggplot(data = speedGroup, aes(x = "", y = density, fill = dvcat)) + 
+  geom_bar(stat='identity') +
+  # We use coor_polar to transform the bar plot into piechart
+  coord_polar("y", start = 0) +
+  # We add labels to every part of the plot
+  geom_text(aes(label = speedGroup$densityString), position = position_stack(vjust = 0.5), size = 4)
+  theme_void() 
+print(speedPlot)
+#--------------------
+```
+
+```{r}
+#-------------------- Relation between airbag deployment and injuries level
+airbagGroup <- copyAccidents %>%
+  # We group by speed and injury severity
+  group_by(abcat, injSeverity) %>%
+  # We throw away the 5 and 6 levels corresponding to unknow levels
+  filter(injSeverity < 5) %>%
+  summarise(count = n())
+airbagGroup
+
+# We create the bar plot
+airbagPlot <- ggplot(data = airbagGroup, aes(x = injSeverity, y = count, fill = abcat)) + 
+  geom_bar(stat='identity') +
+  # We add a x title for the plot
+  xlab("Injury level : from no injury to death") +
+  # We add a y title for the plot
+  ylab("Number of accidents")
+print(airbagPlot)
+#--------------------
+```
+
+```{r}
+#-------------------- Relation between frontal chocs and injury levels
+beltdeadGroup <- copyAccidents %>%
+  # We group injury severity and by presence or not of the seatbelt
+  group_by(injSeverity, seatbelt) %>%
+  # We keep only the deadly accidents
+  filter(dead == "dead" & injSeverity < 5) %>%
+  summarise(count = n())
+# We want a percentage
+beltdeadGroup$density = beltdeadGroup$count/sum(beltdeadGroup$count)*100
+beltdeadGroup
+
+beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
+  geom_bar(stat='identity') +
+  xlab("Injury level : from no injury to death") +
+  ylab("Percentage of accidents")
+
+frontalGroup <- copyAccidents %>%
+  # We group by injury level and by if the choc was frontal or not
+  group_by(injSeverity, frontal) %>%
+  # We keep only the dealdy accidents
+  filter(dead == "dead" & injSeverity < 5) %>%
+  summarise(count = n())
+frontalGroup$density = frontalGroup$count/sum(frontalGroup$count)*100
+
+# We define a translation vector because the frontal choc column is represented by a 0 or 1 
+trans <- c("frontal","non-frontal")
+names(trans) <- c(1,0)
+# We translate the 0 and 1 of the frontal column by "frontal" or "non-frontal" this is more convenient for the plot legend
+frontalGroup$frontalString <- trans[ as.character(frontalGroup$frontal) ]
+frontalGroup
+
+frontalPlot <- ggplot(data = frontalGroup, aes(x = injSeverity, y = density, fill = frontalString)) + 
+  geom_bar(stat='identity') +
+  xlab("Injury level : from no injury to death") +
+  ylab("Percentage of accidents")
+
+# We plot the two upper plts side by side using grid.arrange
+grid.arrange(beltdeadPlot, frontalPlot, ncol=2)
+#--------------------
+```
+
+```{r}
+speedAgeGroup <- copyAccidents %>%
+  filter(dead == "dead")
+
+speedAgeDeathPlot <- ggplot(data = speedAgeGroup, aes(x=dvcat, y=ageOFocc, fill=dvcat)) +
+    geom_boxplot() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=1.5, alpha=0.3) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("Repartition of the dealdy accidents regarding the speed and age") +
+    xlab("Speed") + 
+    ylab("Age of the victim")
+
+print(speedAgeDeathPlot)
+```
+
+```{r}
+speedInjuryGroup <- copyAccidents
+speedInjuryGroup$yearVeh <- speedInjuryGroup$yearacc - speedInjuryGroup$yearVeh
+
+speedInjuryPlot <- hexbin(x = speedInjuryGroup$yearVeh, speedInjuryGroup$ageOFocc, xbins=40)
+my_colors=colorRampPalette(rev(brewer.pal(11,'Spectral')))
+plot(speedInjuryPlot, main="" , colramp=my_colors , legend=F )
+```
+
+```{r}
+#transform the speed label to have only -55km/h and +55km/h
+summaryGroup <- copyAccidents
+summaryGroup <- mutate(copyAccidents, dvcat = ifelse(dvcat == "55+", "+55km/h", "-55km/h"))
+nrow(summaryGroup %>%
+  filter(dead == "dead" & frontal == 1))
+
+#create a data frame containing all the agravating factors
+sumFrame <- data.frame(
+  "Frontal" = (nrow(summaryGroup %>% filter(dead == "dead" & frontal == 1))/nrow(summaryGroup %>% filter(dead == "dead"))*100),
+  "NoSeatbelt" = (nrow(summaryGroup %>% filter(dead == "dead" & seatbelt == "none"))/nrow(summaryGroup %>% filter(dead == "dead"))*100),
+  "Over55km/h" = (nrow(summaryGroup %>% filter(dead == "dead" & dvcat == "+55km/h"))/nrow(summaryGroup %>% filter(dead == "dead"))*100),
+  "Driver" = (nrow(summaryGroup %>% filter(dead == "dead" & occRole == "driver"))/nrow(summaryGroup %>% filter(dead == "dead"))*100),
+  "AirbagNotDeployed" = (nrow(summaryGroup %>% filter(dead == "dead" & deploy == 0))/nrow(summaryGroup %>% filter(dead == "dead"))*100)
+)
+sumFrame
+
+# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each variable to show on the plot!
+data <- rbind(rep(100,5) , rep(0,5) , sumFrame)
+
+# Color vector
+colors_border=c(rgb(0.7,0.5,0.1,0.9))
+colors_in=c(rgb(0.7,0.5,0.1,0.4))
+
+# plot data
+sumFrame<- radarchart( data  , axistype=1 , 
+    #custom polygon
+    pcol=colors_border , pfcol=colors_in , plwd=4 , plty=1,
+    #custom the grid
+    cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,100,25), cglwd=0.8,
+    #custom labels
+    vlcex=0.8 
+    )
+
+# Add a legend
+legend(x=-2.1, y=-1, legend = "Frequency of apparition of the agravating factor", bty = "n", pch=20 , col=colors_in , text.col = "black", cex=1.2, pt.cex=3)
+```
+
+```{r}
+#transform the speed label to have only -55km/h and +55km/h
+summaryGroup <- copyAccidents
+summaryGroup <- mutate(copyAccidents, dvcat = ifelse(dvcat == "55+", "+55km/h", "-55km/h"))
+nrow(summaryGroup %>%
+  filter(dead == "dead" & frontal == 1))
+
+#create a data frame containing all the agravating factors
+sumFrame <- data.frame(
+  Factors = c("DeadlyAccidents","Driver","AirbagNotDeployed","NoSeatbelt","Frontal","Over55km/h"),
+  Number = c(
+    (nrow(summaryGroup %>% filter(dead == "dead"))),
+    (nrow(summaryGroup %>% filter(dead == "dead" & occRole == "driver"))),
+    (nrow(summaryGroup %>% filter(dead == "dead" & deploy == 0))),
+    (nrow(summaryGroup %>% filter(dead == "dead" & seatbelt == "none"))),
+    (nrow(summaryGroup %>% filter(dead == "dead" & frontal == 1))),
+    (nrow(summaryGroup %>% filter(dead == "dead" & dvcat == "+55km/h")))
+  )
+)
+
+sumFrame <- sumFrame %>%
+  # sort by val. This sort the dataframe but NOT the factor levels
+  arrange(Number) %>%    
+  # update the factor levels
+  mutate(Factors=factor(Factors, levels=Factors))
+
+# plot
+sumFrame2 <- ggplot(sumFrame, aes(x = Factors, y = Number)) +
+  geom_segment( aes(xend = Factors, yend = 0), color="grey") +
+  geom_point( size=3, color="red", fill=alpha("orange", 0.3), alpha=0.4, shape=21, stroke=2) +
+  coord_flip() +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  xlab("Number of dealdy accidents") +
+  ylab("Aggravating factor name")
+print(sumFrame2)
+```
+
