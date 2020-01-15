@@ -252,8 +252,8 @@ sumFrame2 <- ggplot(sumFrame, aes(x = Factors, y = Number)) +
     panel.border = element_blank(),
     axis.ticks.x = element_blank()
   ) +
-  xlab("Number of dealdy accidents") +
-  ylab("Aggravating factor name")
+  ylab("Number of dealdy accidents") +
+  xlab("Aggravating factor name")
 print(sumFrame2)
 ```
 
