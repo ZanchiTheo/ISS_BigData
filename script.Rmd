@@ -120,8 +120,15 @@ beltdeadGroup
 
 beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
   geom_bar(stat='identity') +
+    theme(
+    text = element_text(size=20),
+    axis.title.x = element_text(colour = "black", size=20, face="bold"),
+    axis.title.y = element_text(colour = "black", size=20, face="bold")
+  ) +
   xlab("Injury level : from no injury to death") +
   ylab("Percentage of accidents")
+
+print(beltdeadPlot)
 
 frontalGroup <- copyAccidents %>%
   # We group by injury level and by if the choc was frontal or not
@@ -140,8 +147,14 @@ frontalGroup
 
 frontalPlot <- ggplot(data = frontalGroup, aes(x = injSeverity, y = density, fill = frontalString)) + 
   geom_bar(stat='identity') +
+  theme(
+    text = element_text(size=20),
+    axis.title.x = element_text(colour = "black", size=20, face="bold"),
+    axis.title.y = element_text(colour = "black", size=20, face="bold")
+  ) +
   xlab("Injury level : from no injury to death") +
   ylab("Percentage of accidents")
+print(frontalPlot)
 
 # We plot the two upper plts side by side using grid.arrange
 grid.arrange(beltdeadPlot, frontalPlot, ncol=2)
@@ -250,7 +263,9 @@ sumFrame2 <- ggplot(sumFrame, aes(x = Factors, y = Number)) +
   theme(
     panel.grid.major.x = element_blank(),
     panel.border = element_blank(),
-    axis.ticks.x = element_blank()
+    axis.ticks.x = element_blank(),
+#    axis.title.x = element_text(colour = "black", size=20, face="bold"),
+#    axis.title.y = element_text(colour = "black", size=20, face="bold")
   ) +
   ylab("Number of dealdy accidents") +
   xlab("Aggravating factor name")
