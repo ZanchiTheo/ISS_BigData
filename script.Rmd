@@ -16,7 +16,7 @@ library(RColorBrewer)
 library(fmsb)
 
 # We make a copy of the data set
-copyAccidents <- nassCDS
+copyAccidents <- read.csv("nassCDS.csv")
 ```
 
 ```{r}
@@ -33,10 +33,15 @@ ageGroup
 # We define and print a plot correponding to the above variable
 agePlot <- ggplot(data = ageGroup, aes(x = ageOFocc, y = count, group = 1, colour = sex)) +
   geom_point(size=2) +
+  geom_line(size=0.2) +
   geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95) +
   xlab("Age of the driver") +
   ylab("Number of accidents") +
-  theme(plot.title = element_text(size=22))
+  theme(plot.title = element_text(size=22)) +
+  ggtitle("Number of registered accidents regarding the age of drivers") +
+  scale_color_discrete(name="Gender") +
+  xlab("Age of the driver (years)") + ylab("Number of accidents") +
+  theme_bw()
 print(agePlot)
 #--------------------
 ```
@@ -95,13 +100,25 @@ airbagGroup <- copyAccidents %>%
   summarise(count = n())
 airbagGroup
 
+# By using a factor, ordered, we can replay the level of injury from number to actual meaning
+injSeverityLabels = c("No injury", "Possible\ninjury", "No incapacity", "Incapacity", "Killed");
+airbagGroup$injSeverityLabel <- injSeverityLabels[airbagGroup$injSeverity+1]
+airbagGroup$injSeverityLabel <- factor(airbagGroup$injSeverityLabel, levels = injSeverityLabels, ordered=TRUE)
+airbagGroup
+  
 # We create the bar plot
-airbagPlot <- ggplot(data = airbagGroup, aes(x = injSeverity, y = count, fill = abcat)) + 
-  geom_bar(stat='identity') +
+airbagPlot <- ggplot(data = airbagGroup, aes(x = injSeverityLabel, y = count, fill = abcat)) + 
+  geom_bar(stat='identity', position="dodge") +
   # We add a x title for the plot
-  xlab("Injury level : from no injury to death") +
+  xlab("Injury level : From no injury to death") +
   # We add a y title for the plot
-  ylab("Number of accidents")
+  ylab("Number of accidents") +
+  ggtitle("Relation between airbag deployment and injuries level") +
+  scale_fill_viridis(discrete = TRUE, alpha=0.85, direction= -1, name="Airbag\ncategories", labels=c("Deployed", "Not deployed", "Unavailable")) +
+  theme_bw()+ 
+  theme(legend.position = "right") 
+print(airbagPlot)
+
 print(airbagPlot)
 #--------------------
 ```
@@ -112,31 +129,47 @@ beltdeadGroup <- copyAccidents %>%
   # We group injury severity and by presence or not of the seatbelt
   group_by(injSeverity, seatbelt) %>%
   # We keep only the deadly accidents
-  filter(dead == "dead" & injSeverity < 5) %>%
+  filter(injSeverity < 5) %>%
   summarise(count = n())
 # We want a percentage
 beltdeadGroup$density = beltdeadGroup$count/sum(beltdeadGroup$count)*100
 beltdeadGroup
-
-beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverity, y = density, fill = seatbelt)) + 
+# By using a factor, ordered, we can replay the level of injury from number to actual meaning
+injSeverityLabels = c("No injury", "Possible\ninjury", "No\nincapacity", "Incapacity", "Killed");
+beltdeadGroup$injSeverityLabel <- injSeverityLabels[beltdeadGroup$injSeverity+1]
+beltdeadGroup$injSeverityLabel <- factor(beltdeadGroup$injSeverityLabel, levels = injSeverityLabels, ordered=TRUE)
+airbagGroup
+  
+beltdeadPlot <- ggplot(data = beltdeadGroup, aes(x = injSeverityLabel, y = density, fill = seatbelt)) + 
   geom_bar(stat='identity') +
-    theme(
-    text = element_text(size=20),
-    axis.title.x = element_text(colour = "black", size=20, face="bold"),
-    axis.title.y = element_text(colour = "black", size=20, face="bold")
+  theme(
+    text = element_text(size=22),
+    axis.title.x = element_text(colour = "black", size=22),
+    axis.title.y = element_text(colour = "black", size=22)
   ) +
   xlab("Injury level : from no injury to death") +
-  ylab("Percentage of accidents")
+  ylab("Percentage of accidents") +
+  theme(legend.position = "right")+
+  scale_fill_discrete(name="Seatbelt", labels=c("Belted", "Not belted"))+
+  theme_bw()
 
 print(beltdeadPlot)
+
+#######
 
 frontalGroup <- copyAccidents %>%
   # We group by injury level and by if the choc was frontal or not
   group_by(injSeverity, frontal) %>%
   # We keep only the dealdy accidents
-  filter(dead == "dead" & injSeverity < 5) %>%
-  summarise(count = n())
+  filter(injSeverity < 5) %>%
+  summarise(count = n()) 
 frontalGroup$density = frontalGroup$count/sum(frontalGroup$count)*100
+
+# By using a factor, ordered, we can replay the level of injury from number to actual meaning
+injSeverityLabels = c("No injury", "Possible\ninjury", "No\nincapacity", "Incapacity", "Killed");
+frontalGroup$injSeverityLabel <- injSeverityLabels[frontalGroup$injSeverity+1]
+frontalGroup$injSeverityLabel <- factor(frontalGroup$injSeverityLabel, levels = injSeverityLabels, ordered=TRUE)
+#airbagGroup
 
 # We define a translation vector because the frontal choc column is represented by a 0 or 1 
 trans <- c("frontal","non-frontal")
@@ -145,15 +178,19 @@ names(trans) <- c(1,0)
 frontalGroup$frontalString <- trans[ as.character(frontalGroup$frontal) ]
 frontalGroup
 
-frontalPlot <- ggplot(data = frontalGroup, aes(x = injSeverity, y = density, fill = frontalString)) + 
+frontalPlot <- ggplot(data = frontalGroup, aes(x = injSeverityLabel, y = density, fill = frontalString)) + 
   geom_bar(stat='identity') +
   theme(
-    text = element_text(size=20),
-    axis.title.x = element_text(colour = "black", size=20, face="bold"),
-    axis.title.y = element_text(colour = "black", size=20, face="bold")
+    text = element_text(size=22),
+    axis.title.x = element_text(colour = "black", size=22),
+    axis.title.y = element_text(colour = "black", size=22)
   ) +
   xlab("Injury level : from no injury to death") +
-  ylab("Percentage of accidents")
+  ylab("Percentage of accidents") +
+  theme(legend.position = "right")  +
+  scale_fill_discrete(name="Angle", labels=c("Frontal", "Non-frontal")) +
+  theme_bw()
+
 print(frontalPlot)
 
 # We plot the two upper plts side by side using grid.arrange
@@ -169,10 +206,9 @@ speedAgeDeathPlot <- ggplot(data = speedAgeGroup, aes(x=dvcat, y=ageOFocc, fill=
     geom_boxplot() +
     scale_fill_viridis(discrete = TRUE, alpha=0.6) +
     geom_jitter(color="black", size=1.5, alpha=0.3) +
-    theme_ipsum() +
+    theme_bw() +
     theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
+      legend.position="none"
     ) +
     ggtitle("Repartition of the dealdy accidents regarding the speed and age") +
     xlab("Speed") + 
@@ -217,7 +253,7 @@ colors_in=c(rgb(0.7,0.5,0.1,0.4))
 # plot data
 sumFrame<- radarchart( data  , axistype=1 , 
     #custom polygon
-    pcol=colors_border , pfcol=colors_in , plwd=4 , plty=1,
+    pcol=colors_border , pfcol=colors_in , plwd=1.8 , plty=1,
     #custom the grid
     cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,100,25), cglwd=0.8,
     #custom labels
@@ -225,7 +261,7 @@ sumFrame<- radarchart( data  , axistype=1 ,
     )
 
 # Add a legend
-legend(x=-2.1, y=-1, legend = "Frequency of apparition of the agravating factor", bty = "n", pch=20 , col=colors_in , text.col = "black", cex=1.2, pt.cex=3)
+legend(x=-2.1, y=-1, legend = "Frequency of apparition of agravating factors", bty = "n", pch=20 , col=colors_in , text.col = "black", cex=1.2, pt.cex=3)
 ```
 
 ```{r}
@@ -256,8 +292,8 @@ sumFrame <- sumFrame %>%
 
 # plot
 sumFrame2 <- ggplot(sumFrame, aes(x = Factors, y = Number)) +
-  geom_segment( aes(xend = Factors, yend = 0), color="grey") +
-  geom_point( size=3, color="red", fill=alpha("orange", 0.3), alpha=0.4, shape=21, stroke=2) +
+  geom_segment( aes(xend = Factors, yend = 0, stroke=0.8), color="red") +
+  geom_point( size=3, color="red", fill=alpha("orange", 0.3), alpha=0.4, shape=21, stroke=1) +
   coord_flip() +
   theme_light() +
   theme(
